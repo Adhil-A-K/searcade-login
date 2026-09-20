@@ -33,7 +33,7 @@ from pyvirtualdisplay import Display
 
 HOME_URL = "https://searcade.com/"
 DEFAULT_SERVER_ID = os.getenv("SEARCADE_SERVER_ID", "6598").strip() or "6598"
-SERVER_URL_TPL = "https://searcade.com/en/admin/servers/{server_id}"
+SERVER_URL_TPL = "https://admin.searcade.com/servers/{server_id}/console"
 
 SCREENSHOT_DIR = "screenshots"
 os.makedirs(SCREENSHOT_DIR, exist_ok=True)
@@ -264,7 +264,16 @@ def _current_url(sb: SB) -> str:
 def _is_on_server_page(sb: SB, server_id: str) -> bool:
     url = _current_url(sb).lower()
     # 兼容新的 admin.searcade.com/servers/<id> 以及旧的 /admin/servers/<id>
-    return f"/servers/{server_id}" in url or f"/admin/servers/{server_id}" in url
+    if f"/servers/{server_id}" not in url:
+        return False
+    # 防呆：URL 对但页面其实是 404（未真正登录）时，绝不能误判为已登录
+    try:
+        html = (sb.get_page_source() or "").lower()
+    except Exception:
+        html = ""
+    if "page not found" in html or "wrong universe" in html:
+        return False
+    return True
 
 
 def _is_on_userveria_authorize(sb: SB) -> bool:
